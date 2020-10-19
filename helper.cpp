@@ -81,6 +81,27 @@ std::map<string, uint16_t> * get_contig_information(vector<string>  read_map_fil
 }
 
 
+ORFINFO *find_orf_match(vector<ORFINFO *> *orf_vector, std::pair<uint16_t, uint16_t> &loc_pair) {
+  uint16_t min_loc, max_loc, min_orf, max_orf;
+
+  min_loc = min(loc_pair.first, loc_pair.second);
+  max_loc = max(loc_pair.first, loc_pair.second);
+
+  for (auto it = orf_vector->begin(); it != orf_vector->end(); it++) {
+    min_orf = min((*it)->start, (*it)->end);
+    max_orf = max((*it)->start, (*it)->end);
+
+    if (max_loc < min_orf) {
+       return nullptr;
+    }
+
+    if (max_loc >= min_orf && min_loc <= max_orf) {
+       return *it;
+    } 
+  }
+  return nullptr;
+}
+
 std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf, 
                                             vector<string> read_map_files) 
 {
@@ -89,6 +110,11 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
   SamRecord samRecord;
 
   string contigid;
+  std::pair<uint16_t, uint16_t> loc_pair;
+
+  ORFINFO *destorf;
+  vector<ORFINFO *> *orf_vector;
+
   std::map<string, uint32_t> * contig_read_counts = new std::map<string, uint32_t>;
 
   for (size_t i = 0; i < read_map_files.size(); i++) {
@@ -100,8 +126,19 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
        if (contig_read_counts->find(contigid) ==  contig_read_counts->end()) {
          contig_read_counts->insert(std::pair<string, uint32_t>(contigid, 0));
        }
-
        (contig_read_counts->find(contigid)->second)++;
+
+       
+       if (contig_orf->find(contigid) !=  contig_orf->end()) {
+         loc_pair.first  =  samRecord.get1BasedPosition();
+         loc_pair.second =  samRecord.get1BasedAlignmentEnd();
+
+         orf_vector = contig_orf->find(contigid)->second;
+         destorf = find_orf_match(orf_vector, loc_pair);
+         if (destorf != nullptr) {
+           destorf->count++;
+         }
+       }
 #ifdef PRINT_VERBOSE
        std::cout << samRecord.getReferenceName() 
                  << "\t" << samRecord.get1BasedPosition()
@@ -115,137 +152,6 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
   }
 
   return contig_read_counts;
-}
-
-void read_orf_names(string pathways_table_filename, map<string, float> &orfnames) {
-
-    char buf[1000000];
-    std::ifstream input(pathways_table_filename.c_str());
-    if(!input.good()){
-        std::cerr << "Error opening '"<<pathways_table_filename<<"'. Bailing out." << std::endl;
-        return ;
-    }   
-
-    string stringCOMMENT("PWY_NAME");
-    vector<char *> fields; 
-
-    std::string line;
-    while( std::getline( input, line ).good() ){
-       if( matchString(line, stringCOMMENT, true) ) continue;
-       fields.clear();
-       split(line, fields, buf); 
-       if( fields.size() <= 5) continue; 
-
-       for(vector<char *>::iterator it=fields.begin()+5; it!=fields.end() ; it++) {
-           orfnames[std::string(*it)] = 0;
-       }
-    }
-
-    input.close();
-
-}
-
-
-RUN_STATS  detect_multireads_blastoutput(const std::string &blastoutput_file, const std::string &format,\
-     vector<MATCH> &all_reads, map<std::string, unsigned long> &multireads, bool show_status) {
-
-    MatchOutputParser *parser = ParserFactory::createParser(blastoutput_file, format);
-    if( parser ==0 ) {
-        std::cout << "ERROR : Cannot open a parser to parse the file " << blastoutput_file << std::endl;
-    }
-
-    MATCH  match;
-    map<std::string, unsigned long> _multireads;
-
-    map<std::string, struct QUADRUPLE<bool, bool, unsigned int, unsigned  int > > reads_dict;
-   // map<std::string, std::pair<bool, bool > > reads_dict;
- //   map<std::string, std::pair<unsigned int, unsigned int > > multi_reads_dict;
-   
-    if( show_status) std::cout << std::endl << "Number of reads processed : " ;
-
-    RUN_STATS stats;
-
-    int i ;
-    struct QUADRUPLE <bool, bool, unsigned int, unsigned int>   p;
-    for( i =0; ; i++ )  {
-       if( !parser->nextline(match) )  break;
-       if( i >= _MAX ) break;
-
-       if( match.mapped)  stats.num_mapped_reads++;
-       else  stats.num_unmapped_reads++;
-
-       if( match.parity)  stats.num_reads_2++; else stats.num_reads_1++;
-       //if( match.multi)  num_multireads++;
-
-       if( reads_dict.find(match.query) == reads_dict.end()) {
-            p.first = false; 
-            p.second = false;
-            p.third = 0; 
-            p.fourth = 0;
-            reads_dict[match.query] = p;
-       }
-       stats.num_total_reads++;
-      
-       // if it is not mapped then ignore it
-       if( !match.mapped)  continue;
-
-       if( match.parity ) {
-          reads_dict[match.query].first = true;
-          reads_dict[match.query].third++;
-       }
-       else {
-          reads_dict[match.query].second = true;
-          reads_dict[match.query].fourth++;
-       }
-
-       // store it to process later by looking up the dictionary
-
-       try {
-          all_reads.push_back(match);
-       }
-       catch(...) {
-          cout << "failing " << match.query << "   " << all_reads.size() <<  endl;
-       }
-
-       if( show_status && i%10000==0) {
-           std::cout << "\n\033[F\033[J";
-           std::cout << i ;
-       }
-       //std::cout << match.query << "   " << match.subject <<  " "  << match.start << " " << match.end << std::endl;
-    }
-
-    for( map<std::string, struct QUADRUPLE<bool, bool, unsigned int, unsigned int> >::iterator it = reads_dict.begin(); it != reads_dict.end(); it++)  {
-        if( !(it->second.first && it->second.second))  stats.num_singleton_reads++;
-        if( it->second.third > 1)  { stats.num_multireads++; stats.num_secondary_hits += it->second.third -1 ; }
-        if( it->second.fourth  > 1) {  stats.num_multireads++; stats.num_secondary_hits += it->second.fourth-1; }
-    }
-
-
-    stats.num_distinct_reads_unmapped = stats.num_unmapped_reads;
-    stats.num_distinct_reads_mapped = stats.num_mapped_reads - stats.num_secondary_hits;
-
-
-    for( vector<MATCH>::iterator it = all_reads.begin(); it != all_reads.end(); it++)  {
-
-       if( it->parity == 0  ) {
-           if( reads_dict[it->query].first && reads_dict[it->query].second )
-               it->w = 0.5/static_cast<float>(reads_dict[it->query].third);
-           else
-               it->w = 1/static_cast<float>(reads_dict[it->query].third);
-       }
-       else  { //parity 1
-           if( reads_dict[it->query].first && reads_dict[it->query].second )
-               it->w = 0.5/static_cast<float>(reads_dict[it->query].fourth);
-           else
-               it->w = 1/static_cast<float>(reads_dict[it->query].fourth);
-       }
-//    all_sequence_reads += n;
-    }
-    // now store the multireads into the multireads map variable
-    
-    //*_num_unmapped_reads= parser->get_Num_Unmapped_Reads() ;
-    delete parser;
-    return stats;
 }
 
 
@@ -265,7 +171,6 @@ unsigned int  getMaxReadSize(
 
     return size;
 } 
-
 
 
 std::vector<TRIPLET>::iterator  binary_search(std::vector<TRIPLET> &A, int seekValue)
@@ -428,73 +333,6 @@ unsigned long ORFWise_coverage(map<string, CONTIG> &contigs_dictionary, const st
    return _num_orfs;
 }
 
-
-
-void add_RPKM_value_to_pathway_table(const string &pathways_table_filename, const string &output_file, map<string, float> &orfnames) {
-    char buf[1000000];
-    std::ifstream input(pathways_table_filename.c_str());
-    if(!input.good()){
-        std::cerr << "Error opening '"<<pathways_table_filename<<"'. Bailing out." << std::endl;
-        return ;
-    }   
-
-    string stringCOMMENT("PWY_NAME");
-
-/*
-    vector<char *> fields; 
-
-       fields.clear();
-       split(line, fields, buf); 
-       if( fields.size() <= 5) continue; 
-*/
-    vector<string> lines;
-    std::string line;
-
-    //read in all the lines
-    string headerline;
-    while( std::getline( input, line ).good() ){
-       if( matchString(line, stringCOMMENT, true) ) { headerline = line;  continue;}
-       lines.push_back(line);
-    }
-    input.close();
-
-    std::ostream *output  = &std::cout;
-    std::ofstream fout;
-    if( output_file.size()!=0) {
-        fout.open(output_file.c_str(), std::ifstream::out);
-        output = &fout;
-    }
-
-    
-    float pwy_rpkm;
-    vector<char *> fields; 
-    *output << headerline << "\tRPKM_COUNT" << std::endl ;
-    for(vector<string>::iterator it=lines.begin(); it != lines.end(); it++) {
-        split(*it, fields, buf, '\t'); 
-        if( fields.size() < 5) continue; 
-         
-        for(int i =0; i< 5; i++)  {
-            if( i > 0 ) *output << '\t';  
-            *output << fields[i]  ;
-        }
-
-       
-       pwy_rpkm = 0;
-       for(vector<char *>::iterator it=fields.begin()+5; it!=fields.end() ; it++) {
-         // std::cout << *it << std::endl;
-          pwy_rpkm += orfnames[std::string(*it)];
-       }
-       sprintf(buf, "\t%0.2f", pwy_rpkm) ;
-       *output << buf;
-
-       for(vector<char *>::iterator it=fields.begin()+5; it!=fields.end() ; it++) {
-          *output << "\t" << *it;
-       }
-       *output << std::endl ;
-    }
-    if( output_file.size() !=0 )  fout.close();
-    
-}
 
 void writeOut_ORFwise_RPKM_values(const string orf_rpkm_file,  map<string, float> &orfnames) {
     ofstream output_file;
