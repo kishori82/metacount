@@ -6,10 +6,16 @@
 #include <iterator>
 #include <assert.h>
 #include "types.h"
+
 #include "parser.h"
+#include "SamValidation.h"
 
 using namespace std;
 CONTIG_ORF * create_contig_orf_map(const string &orf_file);
+
+void read_bam_files(CONTIG_ORF *contig_orf, vector<string> read_map_files);
+
+std::map<string, uint16_t> * get_contig_information(vector<string> read_map_files);
 
 void read_orf_names(std::string pathways_table, std::map<string, float> &orfnames) ;
 

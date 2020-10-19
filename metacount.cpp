@@ -1,10 +1,11 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <assert.h>
 #include "types.h"
 #include "utilities.h"
+#include "options.h"
 #include "helper.h"
-#include <assert.h>
 
 #include "SamValidation.h"
 using namespace std;
@@ -25,54 +26,21 @@ int main(int argc, char **argv ){
 
   CONTIG_ORF *contig_orf = create_contig_orf_map(options.orf_file);
 
-
-  for (auto it = contig_orf->begin(); it != contig_orf->end(); it++) {
-     std::cout << it->first << std::endl;
-     for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
-       std::cout << "\t" << (*it2)->id  
-                 << "\t" << (*it2)->start 
-                 << "\t" << (*it2)->end 
-                 << "\t" << (*it2)->count  << std::endl;
-     }
-  }
-
   std::map<string, uint16_t> *contig_lengths = get_contig_information(options.read_map_files);
 
-  SamFile samIn;
-  SamFileHeader samFileHeader;
-  SamHeaderRecord *headerRec;//= samFileHeader.getNextSQRecord();	
-  for (int i = 0; i < options.read_map_files.size(); i++) {
-     samIn.OpenForRead(options.read_map_files[i].c_str());
-     samIn.ReadHeader(samFileHeader);
-     while ((headerRec = samFileHeader.getNextSQRecord()) != NULL) {
-       std::cout << headerRec->getTagValue("SN") << "\t" << headerRec->getTagValue("LN") <<  std::endl;
-     }
-     std::cout << " get num SQs " << samFileHeader.getNumSQs() << std::endl;
+  std::cout << "num contigs " << contig_lengths->size() << std::endl;
 
+  print_contig_orf_map(contig_orf);
 
-  }
+  sort_contig_orf_map(contig_orf);
+  std::cout << "----------------------------------\n";
 
-  SamRecord samRecord;
-   // Keep reading records until ReadRecord returns false.
-  while (samIn.ReadRecord(samFileHeader, samRecord)) {
-      std::cout << samRecord.getReferenceName() 
-                  << "\t" << samRecord.get1BasedPosition()
-                  << "\t" << samRecord.get1BasedAlignmentEnd()
-                  << "\t" << samRecord.getAlignmentLength() 
-                  << "\t" << samRecord.get1BasedPosition() + samRecord.getAlignmentLength() - 1
-                  << "-\t-" << samRecord.getFlag()
-                  << "\t" << (samRecord.getFlag() & 0x00000001)
-                  << "\t" << ((samRecord.getFlag() & 0x00000002) >> 1)
-                  << "\t" << ((samRecord.getFlag() & 0x00000010) >> 2)
-                  << "\t" << ((samRecord.getFlag() & 0x00001000) >> 6)
-                  << std::endl;
-   }
+  print_contig_orf_map(contig_orf);
 
-   exit(0);
+  read_bam_files(contig_orf, options.read_map_files);
+
+  exit(0);
    
-   create_contig_orf_map(options.orf_file);
-
-   exit(0);
   //options.print_options();
 
   //get_fasta_sequence_info(options.contigs);

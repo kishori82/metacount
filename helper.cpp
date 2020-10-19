@@ -57,14 +57,50 @@ CONTIG_ORF *create_contig_orf_map(const string &orf_file) {
 }
 
 
-std::map<string, uint16_t> * get_contig_information(options.read_map_files) {
+std::map<string, uint16_t> * get_contig_information(vector<string>  read_map_files) {
+  SamFile samIn;
+  SamFileHeader samFileHeader;
+  SamHeaderRecord *headerRec;//= samFileHeader.getNextSQRecord();	
+  string contig_name;
+  uint16_t contig_len;
 
+  std::map<string, uint16_t> * contig_length = new std::map<string, uint16_t>;
 
-
-
+  for (uint32_t i = 0; i < read_map_files.size(); i++) {
+     samIn.OpenForRead(read_map_files[i].c_str());
+     samIn.ReadHeader(samFileHeader);
+     while ((headerRec = samFileHeader.getNextSQRecord()) != NULL) {
+       //std::cout << headerRec->getTagValue("SN") << "\t" << headerRec->getTagValue("LN") <<  std::endl;
+       contig_name = headerRec->getTagValue("SN");
+       contig_len = strToUint16(headerRec->getTagValue("LN"));
+       contig_length->insert(std::pair<string, uint16_t>(contig_name, contig_len));       
+     }
+     std::cout << " get num SQs " << samFileHeader.getNumSQs() << std::endl;
+  }
+  return contig_length;
 }
 
+void read_bam_files(CONTIG_ORF *contig_orf, vector<string> read_map_files) {
 
+  SamFile samIn;
+  SamFileHeader samFileHeader;
+  SamRecord samRecord;
+
+  for (size_t i = 0; i < read_map_files.size(); i++) {
+     samIn.OpenForRead(read_map_files[i].c_str());
+     samIn.ReadHeader(samFileHeader);
+     while (samIn.ReadRecord(samFileHeader, samRecord)) {
+#ifdef PRINT_VERBOSE
+         std::cout << samRecord.getReferenceName() 
+                  << "\t" << samRecord.get1BasedPosition()
+                  << "\t" << samRecord.get1BasedAlignmentEnd()
+                  << "\t" << samRecord.getAlignmentLength() 
+                  << "\t" << samRecord.get1BasedPosition() + samRecord.getAlignmentLength() - 1
+                  << std::endl;
+#endif
+     }
+  }
+}
 
 void read_orf_names(string pathways_table_filename, map<string, float> &orfnames) {
 
@@ -197,70 +233,6 @@ RUN_STATS  detect_multireads_blastoutput(const std::string &blastoutput_file, co
     return stats;
 }
 
-
-void  process_blastoutput(const std::string & reads_map_file, std::map<string,\
-                           CONTIG> &contigs_dictionary,\
-                            const std::string &reads_map_file_format,\
-                           std::vector<MATCH> &all_reads,\
-                            std::map<string, unsigned long> & multireads, bool show_status) {
-
-    MATCH  match;
-    std::map<string, bool> read_map;
-    //unsigned long count=0;
-    //unsigned long length = 0;
-    unsigned long read_multiplicity ;
-
- //   std::map<string, TRIPLETS> temp_contig_dictionary;
-    TRIPLETS triplets;
-    TRIPLET triplet;
-
-    /*for( map<std::string, CONTIG>::iterator it = contigs_dictionary.begin(); it != contigs_dictionary.end(); it++) {
-        temp_contig_dictionary[it->first] = triplets;
-    }
-*/
-    
-    int i =0;
-    
-    if( show_status ) std::cout << "Number of hits processed : " ;
-    // iteratre through individual hits/alignments 
-    for(vector<MATCH>::iterator it=all_reads.begin();  it!= all_reads.end(); it++ )  {
-
-       if( i >=_MAX ) break;
-
-       if(show_status && i%10000==0) {
-           std::cout << "\n\033[F\033[J";
-           std::cout << i ;
-       }
-       i++;
-
-
-       if( contigs_dictionary.find(it->subject)==contigs_dictionary.end() ) {
-          std::cout << " Missing contig " << it->subject << std::endl;
-          std::cerr << "ERROR : Could not find the matched contig in the contig file " << std::endl;
-          exit(1);
-       }
-
-       read_multiplicity =  (multireads.find(it->query) == multireads.end()) ? 1 : multireads[it->query];
-
-       if(  it->start < it->end ) {
-           triplet.start = it->start;
-           triplet.end = it->end;
-       }
-       else {
-           triplet.start = it->end;
-           triplet.end = it->start;
-       }
-       if( it->w ==0 ) {
-         std::cout << "why zero " << it->w <<std::endl;
-       }
-       triplet.multi = it->w;
-       if( triplet.multi==0 ) {
-         std::cout << "why zero in triplet " << it->w <<std::endl;
-       }
-       contigs_dictionary[it->subject].M.push_back(triplet);
-    }
-    //std::cout << i << std::endl;
-}
 
 unsigned int  getMaxReadSize(
        std::map<string, vector<MATCH> > &orf_dictionary,

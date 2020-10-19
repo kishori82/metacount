@@ -6,7 +6,7 @@ CCFLAGS=  #-m64
 CFLAGS = -Iparser/include -Lparser
 
 PROG = metacount
-SOURCES= utilities.cpp metacount.cpp helper.cpp parser.cpp
+SOURCES= utilities.cpp options.cpp  metacount.cpp helper.cpp parser.cpp
 OBJECTS= $(SOURCES:.cpp=.o)
 HEADERS= $(SOURCES:.cpp=.h)
 
