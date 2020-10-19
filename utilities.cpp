@@ -109,3 +109,13 @@ void sort_contig_orf_map(CONTIG_ORF *contig_orf_map) {
     std::sort(it->second->begin(), it->second->end(), compare_orf_info); 
   }
 }
+
+
+void print_contig_read_counts(std::map<string, uint32_t> * contig_read_counts) {
+  std::cout << "\nCONTIG\tREAD_COUNTS" << std::endl;
+  for (auto it = contig_read_counts->begin(); it != contig_read_counts->end(); it++) {
+    std::cout << it->first << "\t" << it->second << std::endl;
+  }
+}
+
+

@@ -33,11 +33,13 @@ int main(int argc, char **argv ){
   print_contig_orf_map(contig_orf);
 
   sort_contig_orf_map(contig_orf);
+
   std::cout << "----------------------------------\n";
 
-  print_contig_orf_map(contig_orf);
+  std::map<string, uint32_t> * contig_read_counts = 
+    read_bam_files(contig_orf, options.read_map_files);
 
-  read_bam_files(contig_orf, options.read_map_files);
+  print_contig_read_counts(contig_read_counts);
 
   exit(0);
    

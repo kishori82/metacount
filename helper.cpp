@@ -80,26 +80,41 @@ std::map<string, uint16_t> * get_contig_information(vector<string>  read_map_fil
   return contig_length;
 }
 
-void read_bam_files(CONTIG_ORF *contig_orf, vector<string> read_map_files) {
 
+std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf, 
+                                            vector<string> read_map_files) 
+{
   SamFile samIn;
   SamFileHeader samFileHeader;
   SamRecord samRecord;
+
+  string contigid;
+  std::map<string, uint32_t> * contig_read_counts = new std::map<string, uint32_t>;
 
   for (size_t i = 0; i < read_map_files.size(); i++) {
      samIn.OpenForRead(read_map_files[i].c_str());
      samIn.ReadHeader(samFileHeader);
      while (samIn.ReadRecord(samFileHeader, samRecord)) {
+       contigid =  shorten_id(samRecord.getReferenceName(), CONTIGID); 
+
+       if (contig_read_counts->find(contigid) ==  contig_read_counts->end()) {
+         contig_read_counts->insert(std::pair<string, uint32_t>(contigid, 0));
+       }
+
+       (contig_read_counts->find(contigid)->second)++;
 #ifdef PRINT_VERBOSE
-         std::cout << samRecord.getReferenceName() 
-                  << "\t" << samRecord.get1BasedPosition()
-                  << "\t" << samRecord.get1BasedAlignmentEnd()
-                  << "\t" << samRecord.getAlignmentLength() 
-                  << "\t" << samRecord.get1BasedPosition() + samRecord.getAlignmentLength() - 1
-                  << std::endl;
+       std::cout << samRecord.getReferenceName() 
+                 << "\t" << samRecord.get1BasedPosition()
+                 << "\t" << samRecord.get1BasedAlignmentEnd()
+                 << "\t" << samRecord.getAlignmentLength() 
+                 << "\t" << samRecord.get1BasedPosition() + samRecord.getAlignmentLength() - 1
+                 << std::endl;
 #endif
+
      }
   }
+
+  return contig_read_counts;
 }
 
 void read_orf_names(string pathways_table_filename, map<string, float> &orfnames) {
