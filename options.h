@@ -18,37 +18,25 @@ using namespace std;
 struct Options {
     /* Input files for RPKM */
     string orf_file; // .gff ORF file from PRODIGAL
-    string pathways_table; // a table from Pathway Tools with ORFs
     string output_file; // location to write output file (i.e., update pathway table)
     string stats_file; // location to write output file (i.e., update pathway table)
-    string orf_rpkm_file; // location to write output file (i.e., update pathway table)
+    bool show_stats;
     vector<string> read_map_files;
     
     /* Flags and settings */
-    bool multi_reads; // flag for detecting multiple mapping of reads
-    bool show_status; // shows the counter that countes the number of reads processed, and other info 
-                       // on screen
     bool read_counts; // show counts not rpkm
     string reads_map_file_format; // aligner type BWA or BLAST, two SAM files or one
     
-    int count_type;
-    float genome_equivalent;   //genome equivanet from RPKG such as MicrobeSensus
-    // Constructor with default settings 
+    string count_type;
     Options(){
        stats_file = ""; // location to write output file (i.e., update pathway table)
        read_map_files.clear();
        orf_file = "";
-       pathways_table = "";
        output_file = "";
-       output_file = "";
-       orf_rpkm_file = ""; // location to write output file (i.e., update pathway table)
 
-       multi_reads = false;
-       show_status = false;
+       show_stats = false;
        read_counts = false;
-       reads_map_file_format = "sam-1";  
-       genome_equivalent = 1;
-       count_type = 0;
+       string count_type = "TPM";
     };
     
     void print_usage( char *arg);

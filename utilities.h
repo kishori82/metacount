@@ -1,5 +1,5 @@
-#ifndef __UTILITIES__H__
-#define __UTILITIES__H__
+#ifndef __METACOUNT_UTILS__H__
+#define __METACOUNT_UTILS__H__
 
 #include <iostream>
 #include <fstream>
@@ -16,13 +16,6 @@
 
 using namespace std;
 
-class conversion_exception: public exception
-{
-  virtual const char* what() const throw()
-  {
-    return("Error in string to integer conversion!");
-  }
-};
 
 void split(const std::string  &strn, std::vector<char *> &v, char *buf, char d='\t');
 std::string get_orf_name(std::string & strn, std::vector<char *> &v, char *buf);
@@ -48,5 +41,18 @@ void print_contig_orf_map(CONTIG_ORF *);
 void sort_contig_orf_map(CONTIG_ORF *contig_orf_map);
 
 void print_contig_read_counts(std::map<string, uint32_t> * contig_read_counts);
-#endif // __UTILITIES__H__
+
+void print_estimates(std::ostream *output, vector<std::pair<string, float>> &counts);
+
+void print_all_estimates(std::ostream *output, 
+                     vector<std::pair<string, float>> &counts1,
+                     vector<std::pair<string, float>> &counts2,
+                     vector<std::pair<string, float>> &counts3);
+
+bool compare_pairs_byid(const std::pair<string, float> &a, 
+                        const std::pair<string, float> &b);
+
+bool compare_orf_info(ORFINFO *a, ORFINFO *b);  
+
+#endif // __METACOUNT_UTILS__H__
 

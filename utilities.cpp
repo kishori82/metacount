@@ -78,7 +78,7 @@ uint32_t strToUint16(string str1) {
   if (myint <= static_cast<int>(UINT16_MAX) && myint >=0) {
      myint16 = static_cast<uint32_t>(myint);
   } else {
-     conversion_exception a;
+     exception a;
      throw a;
   }
   return myint16;
@@ -94,10 +94,6 @@ void print_contig_orf_map(CONTIG_ORF *contig_orf_map) {
   }
 }
 
-bool compare_orf_info(ORFINFO *a, ORFINFO *b) { 
-  return (a->start < b->start); 
-}
-
 void sort_contig_orf_map(CONTIG_ORF *contig_orf_map) {
   for (auto it = contig_orf_map->begin(); it != contig_orf_map->end(); it++) {
     std::sort(it->second->begin(), it->second->end(), compare_orf_info); 
@@ -110,3 +106,36 @@ void print_contig_read_counts(std::map<string, uint32_t> * contig_read_counts) {
     std::cout << it->first << "\t" << it->second << std::endl;
   }
 }
+
+bool compare_orf_info(ORFINFO *a, ORFINFO *b) { 
+  return (a->start < b->start); 
+}
+
+bool compare_pairs_byid(const std::pair<string, float> &a, 
+                        const std::pair<string, float> &b) { 
+  return (a.first < b.first); 
+}
+
+void print_estimates(std::ostream *output, 
+                     vector<std::pair<string, float>> &counts) {
+  for (auto it1 = counts.begin(); it1 != counts.end(); it1++) {  
+       *output << std::fixed << std::setprecision(2) 
+               <<  it1->first << "\t" << it1->second <<  std::endl;
+  }
+}
+
+void print_all_estimates(std::ostream *output, 
+                     vector<std::pair<string, float>> &counts1,
+                     vector<std::pair<string, float>> &counts2,
+                     vector<std::pair<string, float>> &counts3) {
+  for (auto it1 = counts1.begin(), it2 = counts2.begin(), it3= counts3.begin(); 
+       it1 != counts1.end() && it2 != counts2.end() && it3 != counts3.end(); 
+       it1++, it2++, it3++) {  
+
+       *output << std::fixed << std::setprecision(2) 
+               <<  it1->first << "\t" << it1->second 
+               <<  "\t" << it2->second << "\t" 
+               << it3->second <<  std::endl;
+  }
+}
+
