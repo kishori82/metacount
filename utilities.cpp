@@ -15,8 +15,6 @@ std::string extract_sequence_name(const std::string &name) {
      return sname;
 }
 
-
-
 void split(const string  &strn, std::vector<char *> &v, char *buf, char d) {
   strcpy(buf, strn.c_str());
   char *s1 = buf;
@@ -45,7 +43,6 @@ bool matchString(const string &str, const string & stringtomatch, bool fromstart
 
     if( !fromstart && pos >= 0) return true;
     return false;
-
 }
 
 // Print system error and exit
@@ -58,7 +55,6 @@ string shorten_id(string name, enum IDTYPE idtype)  {
   regex contigid_regex("_([0-9]+)$");
   regex orfid_regex("_([0-9]+_[0-9]+)$");
   std::smatch sm; 
-
   switch (idtype) {
      case ORFID: 
        std::regex_search(name, sm, orfid_regex);
@@ -73,15 +69,14 @@ string shorten_id(string name, enum IDTYPE idtype)  {
   if (sm.size() > 1) {
      return sm[1];
   }
-
   return string("");
 }
 
-uint16_t strToUint16(string str1) {
+uint32_t strToUint16(string str1) {
   int myint(std::stoi(str1));
-  uint16_t myint16(0);
+  uint32_t myint16(0);
   if (myint <= static_cast<int>(UINT16_MAX) && myint >=0) {
-     myint16 = static_cast<uint16_t>(myint);
+     myint16 = static_cast<uint32_t>(myint);
   } else {
      conversion_exception a;
      throw a;
@@ -99,7 +94,6 @@ void print_contig_orf_map(CONTIG_ORF *contig_orf_map) {
   }
 }
 
-
 bool compare_orf_info(ORFINFO *a, ORFINFO *b) { 
   return (a->start < b->start); 
 }
@@ -110,12 +104,9 @@ void sort_contig_orf_map(CONTIG_ORF *contig_orf_map) {
   }
 }
 
-
 void print_contig_read_counts(std::map<string, uint32_t> * contig_read_counts) {
   std::cout << "\nCONTIG\tREAD_COUNTS" << std::endl;
   for (auto it = contig_read_counts->begin(); it != contig_read_counts->end(); it++) {
     std::cout << it->first << "\t" << it->second << std::endl;
   }
 }
-
-

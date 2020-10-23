@@ -15,48 +15,152 @@ unsigned long MatchOutputParser::get_Num_Unmapped_Reads() {
 MatchOutputParser::~MatchOutputParser() {
 }
 
-void getSamFlagInfo(uint16_t i, MATCH &match)  {
-    uint16_t a = i;
-    bool singleton  = 0;
-    //bool c = a&1;
-     
-    a = a >> 2;
-    match.mapped = !(a&1); 
-    singleton = a&1;
+/**
+    @brief getSamFlagInfo gets the samflag into
+    @detail
+    get thes the samflag info based on the following bit positions on a
+    16 bit unsigned int (uint32_t)
 
-    a = a >> 1;
-    match.orphan = a&1; 
-    singleton = singleton^(a&1);
+    description of bit positions
+        1 = read paired
+        2 = read mapped in proper pair
+        3 = read unmapped
+        4 = mate unmapped
+        5 = read reverse strand
+        6 = mate reverse strand
+        7 = first in pair
+        8 = second in pair
+        9 = not primary alignment
+        10 = read fails platform/vendor quality checks
+        11 = read is PCR or optical duplicate
+        12 = supplementary alignment 
 
-    a = a >> 3;
-    if (a & 1)  {
-      match.parity = 0; 
-      a = a >> 1;
-    }
-    else {
-      a = a >> 1;
-      if (a & 1)   match.parity  = 1; 
-      else return ; // false;
-    }
-    a = a >> 1;
-    match.multi = a&1; 
-    
-    a = a >> 3;
-    match.chimeric = a&1; 
-    match.singleton = singleton;
-}
+    Weights of the mapping are computed according to the following rule
 
-/*
-        match.query =  fields[0]; 
-        match.subject = std::string(fields[2]);
-        match.start = atoi(fields[3]);
-        match.end =  match.start +  std::string(fields[9]).size();
-        getSamFlagInfo(static_cast<unsigned int>(atoi(fields[1])), match);
-        //if(status==false) return false;
+    Mapping/alignment information:
+    readtype: SE, PE (single-end or paired-end)    
+    weight: 0, 0.5, 1
+    aligntype: PRIMARY, NON_PRIMARY
 
+    Notations:
+    1st UNMAP: means read itself is not mapped
+    2nd UNMAP: means the read's mate is not mapped
 
-        //std::cout << match.query << "  " << match.mapped << " "  << match.parity << " " << match.orphan << " " << match.chimeric << " " << match.multi << "  " << fields[1] << std::endl;
+    Weights according to combinations <value>(<bit position>)
+    a) SE + NO_ALIGN              0(1) + 4(3) = 4               : 0
+    b) SE + PRIMARY               0(1) + 0(3) + 0(9)  = 0       : 1    
+
+    c) PE + PROPER + UNMAP + MAP + PRIMARY  1(1) + 2(2) + 4(3) + 0(4) + 0(9) = 7         : 1
+    d) PE + PROPER + MAP + UNMAP + PRIMARY  1(1) + 2(2) + 0(3) + 8(4) + 0(9) = 11        : 1
+
+    e) PE + UNMAP + UNMAP   1(1) + 4(3) + 8(4)             : 0
+    f) PE + PROPER + MAP + MAP + PRIMARY  1(1) + 2(2) + 0(3) + 0(4) + 0(9)     : 0.5
+
+    g) rest 
+
+    @params     c  flag 
+    @params match  returns the information about the alignment
 */
+
+void getSamFlagInfo(uint32_t c, MATCH &match)  {
+    match.samflag = c;
+
+    // supplementary
+    if (((c >> 11) & 1) == 0) {
+      match.chimeric = NON_SUPPLEMENTARY;
+    } else {
+      match.chimeric = SUPPLEMENTARY;
+    }
+
+    // se is FIRST and for pe it is dependent on the flag
+    if ((c & 1) == 0) {
+      match.readno = FIRST;
+    } else {
+      if ((c >> 6 & 1) == 1) {
+         match.readno = FIRST;
+      } else {
+         match.readno = SECOND;
+      }
+    }
+
+    match.alnvalid = INVALID;
+    if (match.alnlength > 0) {
+       match.alnvalid = VALID;
+    }
+    //a)
+    if ( 
+        ((c & 1) == 0) && 
+        (((c >> 2) & 1) == 1) 
+        ) {  // 0
+        match.readtype = SE;
+        match.aligntype = NO_ALIGN;
+        match.weight = 0.0;
+    // b)
+    } else if (
+        ((c & 1) == 0) && 
+        (((c >> 2) & 1) == 0) 
+        ) {  // 0
+       match.readtype = SE;
+       match.aligntype = PRIMARY;
+       match.weight = 1.0;
+    // c)
+    } else if (
+        ((c & 1) == 1) &&
+        (((c >> 1) & 1) == 0) && 
+        (((c >> 2) & 1) == 1) && 
+        (((c >> 3) & 1) == 0) 
+        ) {  // 0
+      match.readtype = PE;
+      if (match.alnlength > 0) {
+         match.aligntype = PRIMARY;
+         match.weight = 1.0;  //1.0
+      } else {
+         match.aligntype = NO_ALIGN;
+         match.weight = 0.0;  //1.0
+      }
+    // d)
+    } else if (
+       ((c & 1) == 1) && 
+       (((c >> 1) & 1) == 0) && 
+       (((c >> 2) & 1) == 0) && 
+       (((c >> 3) & 1) == 1) 
+       ) {  // 0
+       match.readtype = PE;
+       if (match.alnlength > 0) {
+          match.aligntype = PRIMARY;
+          match.weight = 1.0;  //1.0
+       } else {
+           match.aligntype = NO_ALIGN;
+           match.weight = 0.0;  //1.0
+       }
+    // e)
+    } else if (
+       ((c & 1) == 1) && 
+       (((c >> 2) & 1) == 1) && 
+       (((c >> 3) & 1) == 1) 
+       ) {  // 0
+       match.readtype = PE;
+       match.aligntype = NO_ALIGN;
+       match.weight = 0.0;   // 0;
+    // f)
+    } else if ((c & 1) == 1 && 
+       ((c >> 1) & 1) == 1 && 
+       ((c >> 2) & 1) == 0 && 
+       ((c >> 3) & 1) == 0 
+       ) {  // 0
+        match.readtype = PE;
+        match.aligntype = PRIMARY;
+        match.weight = 0.5;  // 0.5;
+    } else { // g)
+        if ( (c & 1) == 1) {
+            match.readtype = PE;
+         } else { 
+             match.readtype = SE;
+         }
+         match.aligntype = OTHER;
+         match.weight = 0.0;
+    }
+}
 
 GffFileParser::GffFileParser(const std::string &filename, 
                              const std::string &format) : MatchOutputParser(filename, format) {

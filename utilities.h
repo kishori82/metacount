@@ -41,7 +41,7 @@ void error(char *msg);
 
 string shorten_id(string name, enum IDTYPE);
 
-uint16_t strToUint16(string str1);
+uint32_t strToUint16(string str1);
 
 void print_contig_orf_map(CONTIG_ORF *);
 

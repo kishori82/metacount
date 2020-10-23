@@ -50,4 +50,5 @@ class ParserFactory {
 };
 
 
+void getSamFlagInfo(uint32_t c, MATCH &match);
 #endif // __PARSER_H__
