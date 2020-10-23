@@ -17,9 +17,6 @@ using namespace std;
 namespace fs = std::experimental::filesystem;
 
 
-auto add = [] (uint32_t value, const std::pair<string, uint32_t>&p) {
-                return value + p.second; };
-
 bool compare_triplets(const TRIPLET &a, const TRIPLET &b) {
   return a.start < b.start ? true : false; 
 }
@@ -33,7 +30,11 @@ int main(int argc, char **argv ){
     options.print_usage(argv[0]); exit(0); 
   }
 
-  CONTIG_ORF *contig_orf = create_contig_orf_map(options.orf_file);
+  RESULTS results;
+
+  results.contig_orf = create_contig_orf_map(options.orf_file);
+
+  //CONTIG_ORF *contig_orf = create_contig_orf_map(options.orf_file);
 
   for (size_t i = 0; i < options.read_map_files.size(); i++) {
      if (!fs::exists(options.read_map_files[i].c_str())) {
@@ -49,18 +50,44 @@ int main(int argc, char **argv ){
 
   //print_contig_orf_map(contig_orf);
 
-  sort_contig_orf_map(contig_orf);
+  sort_contig_orf_map(results.contig_orf);
 
   std::map<string, uint32_t> * contig_read_counts = 
-    read_bam_files(contig_orf, options.read_map_files);
+    read_bam_files(results.contig_orf, options.read_map_files);
 
   //print_contig_read_counts(contig_read_counts);
 
-  print_contig_orf_map(contig_orf);
+  //print_contig_orf_map(contig_orf);
 
-  uint32_t genome_length = accumulate(contig_lengths->begin(), contig_lengths->end(), 0, add);
+  uint32_t genome_length = accumulate(
+                                      contig_lengths->begin(), 
+                                      contig_lengths->end(), 0, 
 
-  std::cout << " Total genome length " << genome_length << std::endl;
+                                      [] (uint32_t value, const std::pair<string, uint32_t>&p) {
+                                          return value + p.second; 
+                                      }
+                                     );
+
+                 //[] (uint32_t value, const std::pair<string, vector<ORFINFO *>*> &orfvec) {
+  uint32_t total_read_count_across_orfs
+    = accumulate(
+                 results.contig_orf->begin(), 
+                 results.contig_orf->end(), 0, 
+                    
+                 [] (uint32_t value, const std::pair<string, vector<ORFINFO *>*> &orfvec) {
+                       float tot_count = value;
+                       for (auto it = orfvec.second->begin(); it != orfvec.second->end(); it++) {
+                          tot_count = tot_count + (*it)->count; 
+                       }
+                       return tot_count; 
+                 }
+               );
+
+
+
+
+  std::cout << "Total genome length " << genome_length << std::endl;
+  std::cout << "Total read count across all orfs " << total_read_count_across_orfs << std::endl;
   exit(0);
    
   //options.print_options();

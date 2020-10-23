@@ -183,6 +183,9 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
 
          // if found a valid overlapping contig then add the count
          if (destorf != nullptr) {
+            if (match.readno == FIRST) sam_file_stats->num_reads1_on_orfs++; 
+            if (match.readno == SECOND) sam_file_stats->num_reads2_on_orfs++; 
+
             destorf->count = destorf->count + match.weight;
          }
        }
@@ -196,7 +199,6 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
                  << std::endl;
 #endif
      }
-
      sam_file_stats->print_stats(&std::cout);
   }
 

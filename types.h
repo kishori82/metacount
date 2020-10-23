@@ -13,7 +13,9 @@ typedef struct _ORFINFO {
   uint32_t start, end;
   float count;
   
-  _ORFINFO(string _id, uint32_t _start, uint32_t _end): id(_id), start(_start), end(_end), count(0) {}
+  _ORFINFO(string _id, uint32_t _start, 
+           uint32_t _end): id(_id), start(_start), 
+           end(_end), count(0) {}
 } ORFINFO;
 
 enum IDTYPE {ORFID, CONTIGID};
@@ -41,7 +43,6 @@ enum CHIMERIC{SUPPLEMENTARY,  NON_SUPPLEMENTARY};
 typedef  struct _MATCH {
     std::string query, subject;
     int16_t start, end, alnlength;
-
 
     int16_t samflag;
 
@@ -117,50 +118,59 @@ typedef  struct _MATCH {
     } 
 } MATCH;
 
-template< typename A, typename B, typename C, typename D>
-struct QUADRUPLE {
-     A first;
-     B second;
-     C third;
-     D fourth;
-};
+
+typedef struct _GLOBAL_STATS {
+    int num_file; 
+    int num_contigs; 
+    int total_contig_lengths; 
+    int total_reads1; 
+    int total_reads2; 
+    float tot_count_across_orf;
+
+    _GLOBAL_STATS() {
+      num_file = 0; 
+      num_contigs = 0; 
+      total_contig_lengths = 0; 
+      total_reads1 = 0; 
+      total_reads2 = 0; 
+      tot_count_across_orf = 0;
+    }
+    void print_stats(std::ostream *output) {
+        *output << std::endl;
+        *output << "Number of sam/bam files           : " << num_file << std::endl; 
+        *output << "Number of contigs                 : " << num_contigs << std::endl; 
+        *output << "Total contig length               : " << total_contig_lengths << std::endl; 
+        *output << "Total read1s                      : " << total_reads1 << std::endl;
+        *output << "Total read2s                      : " << total_reads1 << std::endl;
+        *output << "Total count to across orfs        : " << tot_count_across_orf << std::endl; 
+    }
+} GLOBAL_STATS;
 
 typedef struct _RUN_STATS {
     int num_unmapped_alns ; 
     int num_mapped_alns ; 
-    int num_singleton_reads ; 
     int num_reads_1 ; 
     int num_reads_2 ; 
-    int num_multireads ;
+    int num_reads1_on_orfs ; 
+    int num_reads2_on_orfs ; 
     int num_total_alns ;
-    int num_secondary_hits ;
-    int num_distinct_reads_unmapped;
-    int num_distinct_reads_mapped;
     
     _RUN_STATS() {
         num_unmapped_alns =0; 
         num_mapped_alns =0; 
-        num_singleton_reads =0; 
         num_reads_1 =0; 
         num_reads_2 =0; 
-        num_multireads = 0;
         num_total_alns = 0;
-        num_secondary_hits = 0;
-        num_distinct_reads_unmapped =0 ;
-        num_distinct_reads_mapped = 0;
+        num_reads1_on_orfs = 0 ; 
+        num_reads2_on_orfs = 0; 
     }
 
     struct _RUN_STATS&  operator+( const struct _RUN_STATS & stats) {
         this->num_unmapped_alns += stats.num_unmapped_alns;  
         this->num_mapped_alns  += stats.num_mapped_alns  ;
-        num_singleton_reads += stats.num_singleton_reads ;
         num_reads_1 += stats.num_reads_1;  
         num_reads_2 += stats.num_reads_2; 
-        num_multireads += stats.num_multireads; 
         num_total_alns  += stats.num_total_alns  ;
-        num_secondary_hits  += stats.num_secondary_hits;
-        num_distinct_reads_unmapped  += stats.num_distinct_reads_unmapped  ;
-        num_distinct_reads_mapped  += stats.num_distinct_reads_mapped  ;
         return *this;
     }
 
@@ -176,15 +186,19 @@ typedef struct _RUN_STATS {
 
         *output << "Percentage of mapped alignments  : " << std::setprecision(4)  
                 << static_cast<float>(num_mapped_alns) *100/static_cast<float>(x) << "%" <<  std::endl; 
-        //*output << "Number of singletons             : " << num_singleton_reads << std::endl; 
         *output << "Number of read 1                 : " << num_reads_1 << std::endl; 
         *output << "Number of read 2                 : " << num_reads_2 << std::endl; 
-        //*output << "Number of multireads             : " << num_multireads << std::endl; 
-        //*output << "Number of secondary hits         : " << num_secondary_hits << std::endl; 
-       // *output << "Number distinct reads mapped     : " << num_distinct_reads_mapped << std::endl; 
-        //*output << "Number distinct reads unmapped   : " << num_distinct_reads_unmapped << std::endl; 
+        *output << "Number of read1 on ORFs          : " << num_reads1_on_orfs << std::endl; 
+        *output << "Number of read2 on ORFs          : " << num_reads2_on_orfs << std::endl; 
     }
 } RUN_STATS;
+
+typedef struct _RESULTS {
+   vector<RUN_STATS *> runresults;
+   GLOBAL_STATS global_stats;
+   CONTIG_ORF *contig_orf;
+   std::map<string, uint32_t> *contig_lengths;
+} RESULTS;
 
 #endif //__DATA_TYPES__
 
