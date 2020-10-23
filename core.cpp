@@ -19,7 +19,6 @@ CONTIG_ORF *create_contig_orf_map(const string &orf_file) {
     vector<MATCH> match_vector;
 
     // reads in all the orfs and associated to the contigs 
-    std::cout << "Sorting through the reads...." ;
     string contigid, orfid;
     for(int i =0; ; i++ )  {
        if( !parser->nextline(match) )  break;
@@ -101,7 +100,7 @@ ORFINFO *find_orf_match(vector<ORFINFO *> *orf_vector, std::pair<uint32_t, uint3
   return nullptr;
 }
 
-std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf, 
+std::map<string, uint32_t> * read_bam_files(RESULTS &results, 
                                             vector<string> read_map_files)
 {
   SamFile samIn;
@@ -113,15 +112,19 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
 
   ORFINFO *destorf;
   vector<ORFINFO *> *orf_vector;
+  CONTIG_ORF *contig_orf = results.contig_orf;
 
   MATCH  match;
   std::map<string, uint32_t> * contig_read_counts = new std::map<string, uint32_t>;
   for (size_t i = 0; i < read_map_files.size(); i++) {
-     std::cout << "processing : " << read_map_files[i] << std::endl;
      samIn.OpenForRead(read_map_files[i].c_str());
      samIn.ReadHeader(samFileHeader);
 
-     RUN_STATS *sam_file_stats  = new RUN_STATS;
+     SAM_STATS *sam_file_stats  = new SAM_STATS;
+
+     results.sam_file_results.push_back(sam_file_stats);
+     sam_file_stats->file_name = read_map_files[i];
+
      while (samIn.ReadRecord(samFileHeader, samRecord)) {
        contigid =  shorten_id(samRecord.getReferenceName(), CONTIGID); 
 
@@ -199,11 +202,88 @@ std::map<string, uint32_t> * read_bam_files(CONTIG_ORF *contig_orf,
                  << std::endl;
 #endif
      }
-     sam_file_stats->print_stats(&std::cout);
+    // sam_file_stats->print_stats(&std::cout);
   }
 
   return contig_read_counts;
 }
+
+
+vector<std::pair<string, float>>  compute_counts(CONTIG_ORF *contig_orf_map) {
+  vector<std::pair<string, float>> idcounts;
+  for (auto it = contig_orf_map->begin(); it != contig_orf_map->end(); it++) {
+    for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
+      idcounts.push_back(std::pair<string, float>((*it2)->id, (*it2)->count));
+    }
+  }
+  return idcounts; 
+}
+
+vector<std::pair<string, float>>  compute_rpkm(CONTIG_ORF *contig_orf_map, RESULTS &results) {
+  vector<std::pair<string, float>> idcounts;
+  float rpkm = 0;
+  float tot_reads = static_cast<float>(results.global_stats.total_reads1 + results.global_stats.total_reads2); 
+  tot_reads = tot_reads == 0 ? 1 : tot_reads;
+
+  for (auto it = contig_orf_map->begin(); it != contig_orf_map->end(); it++) {
+    for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
+      rpkm = (1000*((*it2)->count)/abs((*it2)->end - (*it2)->start))*(1000000/tot_reads);
+      idcounts.push_back(std::pair<string, float>((*it2)->id, rpkm));
+    }
+  }
+  return idcounts; 
+}
+
+vector<std::pair<string, float>>  compute_tpm(CONTIG_ORF *contig_orf_map, RESULTS &results) {
+  vector<std::pair<string, float>> idcounts;
+
+  // sum the rpks
+  float sum_rpk = 0;
+  for (auto it = contig_orf_map->begin(); it != contig_orf_map->end(); it++) {
+    for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
+      sum_rpk += (1000*((*it2)->count)/abs((*it2)->end - (*it2)->start));
+    }
+  }
+
+  // compute the TMPs
+  float rpk;
+  sum_rpk = sum_rpk != 0 ? sum_rpk : 1;
+  for (auto it = contig_orf_map->begin(); it != contig_orf_map->end(); it++) {
+    for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
+      rpk  = (1000*((*it2)->count)/abs((*it2)->end - (*it2)->start))*(1000000/sum_rpk);
+      idcounts.push_back(std::pair<string, float>((*it2)->id, rpk));
+    }
+  }
+
+  return idcounts; 
+}
+
+
+
+vector<std::pair<string, float>>  compute_stats(
+                                                 CONTIG_ORF *contig_orf_map, 
+                                                 RESULTS & results,
+                                                 STATS_TYPE statstype) {
+  vector<std::pair<string, float>> idcounts;
+
+  switch (statstype) {
+      case COUNT:
+          idcounts =  compute_counts(contig_orf_map);
+          break;
+      case RPKM:
+          idcounts =  compute_rpkm(contig_orf_map, results);
+          break;
+      case TPM:
+          idcounts =  compute_tpm(contig_orf_map, results);
+          break;
+      default:
+          break;
+  }
+
+  std::sort(idcounts.begin(), idcounts.end(), compare_pairs_byid);
+  return idcounts; 
+}
+
 
 std::vector<TRIPLET>::iterator binary_search(std::vector<TRIPLET> &A, int seekValue)
 {
