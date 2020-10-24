@@ -89,7 +89,7 @@ void print_contig_orf_map(CONTIG_ORF *contig_orf_map) {
     std::cout << it->first << std::endl;
     for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++) {
       std::cout << "\t" <<  (*it2)->id << "\t" << (*it2)->start 
-               << "\t" << (*it2)->end << "\t" << (*it2)->count << std::endl;
+                << "\t" << (*it2)->end << "\t" << (*it2)->count << std::endl;
     }
   }
 }
@@ -138,4 +138,3 @@ void print_all_estimates(std::ostream *output,
                << it3->second <<  std::endl;
   }
 }
-

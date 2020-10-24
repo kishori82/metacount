@@ -61,14 +61,15 @@ int main(int argc, char **argv ){
 
 
   std::ostream *output = &std::cout;
+  std::ofstream fout;
   if (options.output_file.size() > 0) {
-      std::ofstream fout;
       try {
          fout.open(options.output_file.c_str(), std::ifstream::out);
       }
       catch(exception& e) {
          error(e.what());
       }
+      output = &fout;
   }
   
   vector<std::pair<string, float>> orf_count, orf_count_rpkm, orf_count_tpm;
@@ -96,17 +97,18 @@ int main(int argc, char **argv ){
 
   if (options.show_stats) { 
       std::ostream *output = &std::cout;
-      std::ofstream fout;
+      std::ofstream fout1;
       if (options.stats_file.size() > 0) {
          try {
-            fout.open(options.stats_file.c_str(), std::ifstream::out);
+            fout1.open(options.stats_file.c_str(), std::ifstream::out);
          }
          catch(exception& e) {
             error(e.what());
          }
-         output = &fout;
+         output = &fout1;
       }   
       results.print(output);
+      fout1.close();
   }
 
   /*
