@@ -396,7 +396,7 @@ double IntArray::DoubleProduct()
 
 int IntArray::Hash(int initval)
 {
-    return hash((unsigned char *) items, sizeof(int) * count, initval);
+    return _hash((unsigned char *) items, sizeof(int) * count, initval);
 }
 
 int IntArray::SumProduct(const IntArray & weight) const
