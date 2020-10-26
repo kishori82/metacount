@@ -22,6 +22,7 @@ CONTIG_ORF *create_contig_orf_map(const string &orf_file) {
     string contigid, orfid;
     for(int i =0; ; i++ )  {
        if( !parser->nextline(match) )  break;
+
 /*
        std::cout << shorten_id(match.query, CONTIGID) 
                  << "\t" <<  match.query 
@@ -31,8 +32,10 @@ CONTIG_ORF *create_contig_orf_map(const string &orf_file) {
                  << match.start << "\t"<< match.end << std::endl;
 */
 
+     
        contigid =  shorten_id(match.query, CONTIGID); 
-       orfid =  shorten_id(match.subject, ORFID); 
+       //orfid =  shorten_id(match.subject, ORFID); 
+       orfid =  match.subject; 
 
        if (contig_orf->find(contigid) == contig_orf->end()) {
           contig_orf->insert(std::pair<string, vector<ORFINFO *>*>(contigid, new std::vector<ORFINFO *> ));

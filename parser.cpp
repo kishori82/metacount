@@ -176,6 +176,41 @@ GffFileParser::~GffFileParser() {
    this->input.close();
 }
 
+string get_orf_name(string name)  {
+  regex orfname_long_regex("^ID=[^;]+_([0-9]+_[0-9]+);");
+  regex orfname_short_regex("^ID=([0-9]+_[0-9]+);");
+  regex orfname_short_trna_regex("^ID=([0-9]+_[0-9]+_tRNA);");
+  regex orfname_short_rrna_regex("^ID=([0-9]+_[0-9]+_rRNA);");
+  std::smatch sm; 
+
+  // a long name prodigal orf
+  std::regex_search(name, sm, orfname_long_regex);
+  if (sm.size() > 1) {
+     return sm[1];
+  }
+
+  // a short name prodigal orf
+  std::regex_search(name, sm, orfname_short_regex);
+  if (sm.size() > 1) {
+     return sm[1];
+  }
+
+  // a short name tRNA orf
+  std::regex_search(name, sm, orfname_short_trna_regex);
+  if (sm.size() > 1) {
+     return sm[1];
+  }
+
+  // a short name rRNA orf
+  std::regex_search(name, sm, orfname_short_rrna_regex);
+  if (sm.size() > 1) {
+     return sm[1];
+  }
+
+  return string("");
+}
+
+
 bool GffFileParser::nextline(MATCH &match) {
   string line;
   string field8; 
@@ -184,7 +219,7 @@ bool GffFileParser::nextline(MATCH &match) {
   
   while (std::getline(this->input, line ).good()) {
       split(line, fields, this->buf, '\t');
-   //   std::cout << line << std::endl;
+      //std::cout << line << std::endl;
      // std::cout << "size " << fields.size() << std::endl;
       if(fields.size() < 9)  continue;
       //std::cout << fields[3] << " - " << fields[4] << " " << _success <<std::endl;
@@ -205,8 +240,9 @@ bool GffFileParser::nextline(MATCH &match) {
 */
      //respect the order before calling get_orf_name
      // because the same buffer is used
-     field8 = std::string(fields[8]);
-     match.subject = get_orf_name(field8, this->tempv, this->buf);
+     //field8 = std::string(fields[8]);
+     //match.subject = get_orf_name(field8, this->tempv, this->buf);
+     match.subject =  get_orf_name(std::string(fields[8]));
      return true;
   }
   

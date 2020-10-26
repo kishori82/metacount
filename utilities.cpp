@@ -29,6 +29,7 @@ void split(const string  &strn, std::vector<char *> &v, char *buf, char d) {
   }
 }
 
+/*
 std::string get_orf_name(std::string  &strn, std::vector<char *> &v, char *buf) {
     split(strn, v, buf, ';'); 
     if(v.size() == 0)  return std::string("");
@@ -36,6 +37,7 @@ std::string get_orf_name(std::string  &strn, std::vector<char *> &v, char *buf) 
     if(v.size() < 2)  return std::string("");
     return std::string(v[1]);
 }
+*/
 
 bool matchString(const string &str, const string & stringtomatch, bool fromstart) {
     unsigned long pos = str.find(stringtomatch);
@@ -54,10 +56,26 @@ void error(char *msg) {
 string shorten_id(string name, enum IDTYPE idtype)  {
   regex contigid_regex("_([0-9]+)$");
   regex orfid_regex("_([0-9]+_[0-9]+)$");
+  regex orfid_trna_regex("_([0-9]+_[0-9]+_tRNA)$");
+  regex orfid_rrna_regex("_([0-9]+_[0-9]+_rRNA)$");
   std::smatch sm; 
   switch (idtype) {
      case ORFID: 
+       // prodigal predicted orf
        std::regex_search(name, sm, orfid_regex);
+       if (sm.size() > 1) {
+         return sm[1];
+       }
+       // tRNA orf
+       std::regex_search(name, sm, orfid_trna_regex);
+       if (sm.size() > 1) {
+         return sm[1];
+       }
+       // rRNA orf
+       std::regex_search(name, sm, orfid_rrna_regex);
+       if (sm.size() > 1) {
+         return sm[1];
+       }
        break;
      case CONTIGID: 
        std::regex_search(name, sm, contigid_regex);

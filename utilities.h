@@ -18,7 +18,8 @@ using namespace std;
 
 
 void split(const std::string  &strn, std::vector<char *> &v, char *buf, char d='\t');
-std::string get_orf_name(std::string & strn, std::vector<char *> &v, char *buf);
+
+//std::string get_orf_name(std::string & strn, std::vector<char *> &v, char *buf);
 
 
 bool matchString(const string &str, const string & stringtomatch, bool fromstart=false);

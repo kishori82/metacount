@@ -49,7 +49,7 @@ int main(int argc, char **argv ){
 
   //std::cout << "num contigs " << contig_lengths->size() << std::endl;
 
-  //print_contig_orf_map(contig_orf);
+  //print_contig_orf_map(results.contig_orf);
 
   sort_contig_orf_map(results.contig_orf);
 
